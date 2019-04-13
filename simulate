@@ -1,0 +1,50 @@
+#!/usr/bin/env python
+
+from Queue import Queue
+from threading import Thread
+from time import sleep
+from progressbar import *
+import sys
+import os
+
+num_worker_threads = int(sys.argv[1])
+
+num_simulations = "10"
+start_load = 50
+end_load = 500
+step_load = 50
+p = 0
+
+#progressbar
+widgets = ['Simulation: ', Percentage(),' ', Bar(marker='0',left='[',right=']'),' ', ETA()]
+
+def worker():
+    global p
+    while True:
+        item = q.get()
+        os.system(item)
+        p+=1
+        pbar.update(p)
+        q.task_done()
+
+        
+
+q = Queue()
+for load in range(start_load,end_load+1,step_load):
+    for topology in os.listdir('xml/topologies'):
+        for rsa in os.listdir('xml/rsa'):
+            q.put("java -Xmx10g -jar FlexGridSim.jar "+rsa+" "+topology+" ocr.xml "+num_simulations+" "+str(load)+" "+str(load)+" "+str(load)+" > simulation.log")
+
+start_size = q.qsize()
+pbar = ProgressBar(max_value=start_size)
+pbar.update(p)
+#progress = Thread(target=show_progress)
+pbar.start()
+#progress.start()
+for i in range(num_worker_threads):
+    t = Thread(target=worker)
+    t.daemon = True
+    t.start()
+
+q.join()
+pbar.finish()
